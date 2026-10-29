@@ -1,0 +1,10 @@
+matter-dev-guideline-examples
+Copyright 2026 SESLab, Sejong University
+
+본 저장소는 한국정보통신기술협회(TTA) 「매터 제품 개발 가이드라인 개발 및 TTA 표준화」 사업의
+산출물인 「매터 제품 개발 가이드라인(한글 해설서)」의 예제 코드 라이브러리이다.
+
+This product includes software derived from:
+- esp-matter (Espressif Systems), Apache License 2.0 — device_hal/esp32_devkit_c
+- esp-matter examples/light (Public Domain / CC0)
+- nRF Connect SDK (Nordic Semiconductor) sample build commands — thread/

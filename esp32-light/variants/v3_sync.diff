@@ -1,0 +1,38 @@
+--- a/main/app_driver.cpp
++++ b/main/app_driver.cpp
+@@ -16,6 +16,7 @@
+ #include <device.h>
+ #include <led_driver.h>
+ #include <button_gpio.h>
++#include <platform/CHIPDeviceLayer.h>
+ 
+ using namespace chip::app::Clusters;
+ using namespace esp_matter;
+@@ -23,12 +24,27 @@
+ static const char *TAG = "app_driver";
+ extern uint16_t light_endpoint_id;
+ 
++/* [해설서 표 10-12] 구동부가 밝기를 바꿔야 할 때는 출력을 직접 바꾸지 않고 CurrentLevel 속성을 갱신한다.
++ * 속성 갱신이 콜백을 거쳐 app_driver_light_set_brightness()로 전달되므로 속성값과 출력이 항상 일치한다.
++ * 속성 콜백 안에서 다른 속성을 바로 갱신하지 않도록 Matter 작업 큐로 넘겨 실행한다.
++ * 주의: 이후 SDK의 On/Off-Level 연동이 CurrentLevel을 OnLevel 또는 이전 레벨로 다시 갱신할 수 있으므로,
++ * "켜짐 시 밝기" 정책 자체는 OnLevel 속성으로 구현한다(app_main.cpp). */
++static void app_driver_sync_level_to_max(intptr_t arg)
++{
++    esp_matter_attr_val_t level = esp_matter_nullable_uint8(MATTER_BRIGHTNESS); /* CurrentLevel은 nullable 속성 */
++    attribute::update(light_endpoint_id, LevelControl::Id, LevelControl::Attributes::CurrentLevel::Id, &level);
++    ESP_LOGI(TAG, "[SYNC] CurrentLevel attribute updated to %u", MATTER_BRIGHTNESS);
++}
++
+ /* Do any conversions/remapping for the actual value here */
+ static esp_err_t app_driver_light_set_power(led_driver_handle_t handle, esp_matter_attr_val_t *val)
+ {
+     /* [해설서 표 10-11] 켜짐 시 밝기는 구동부가 정하지 않는다. Level Control 클러스터가 OnLevel 값으로 CurrentLevel을
+      * 갱신하고, 그 갱신이 app_driver_light_set_brightness()로 전달되어 출력에 반영된다. */
+     ESP_LOGI(TAG, "[HW] power=%d", val->val.b);
++    if (val->val.b) {
++        chip::DeviceLayer::PlatformMgr().ScheduleWork(app_driver_sync_level_to_max);
++    }
+     return led_driver_set_power(handle, val->val.b);
+ }
+ 
